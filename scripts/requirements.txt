@@ -1,0 +1,4 @@
+google-analytics-data
+google-auth-oauthlib
+cryptography
+pytest
