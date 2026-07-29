@@ -1,6 +1,13 @@
 import json
 
-from crypto_utils import encrypt_json, decrypt_json, PBKDF2_ITERATIONS
+import pytest
+
+from crypto_utils import (
+    DecryptionError,
+    decrypt_json,
+    encrypt_json,
+    PBKDF2_ITERATIONS,
+)
 
 
 def test_round_trip_encrypt_decrypt():
@@ -12,11 +19,8 @@ def test_round_trip_encrypt_decrypt():
 
 def test_wrong_password_raises():
     enc = encrypt_json({"a": 1}, "right-password")
-    try:
+    with pytest.raises(DecryptionError):
         decrypt_json(enc, "wrong-password")
-        assert False, "應該要拋出例外，不該解密成功"
-    except Exception:
-        pass
 
 
 def test_encrypted_blob_has_expected_fields():
