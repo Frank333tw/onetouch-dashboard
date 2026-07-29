@@ -262,7 +262,7 @@ testpaths = tests
 cd "/Users/frank/Desktop/claude code/onetouch-dashboard/scripts"
 .venv/bin/python -m pytest tests/test_config.py -v
 ```
-Expected: PASS，9 passed
+Expected: PASS，8 passed
 
 - [ ] **Step 9: Commit**
 
@@ -355,7 +355,7 @@ import os
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-PBKDF2_ITERATIONS = 210_000
+PBKDF2_ITERATIONS = 600_000  # OWASP 現行對 PBKDF2-HMAC-SHA256 的建議值（210_000 是給 SHA-512 的，用錯雜湊會讓拖慢暴力破解的效果打折）
 SALT_BYTES = 16
 IV_BYTES = 12
 KEY_BYTES = 32  # AES-256
@@ -906,7 +906,7 @@ cat ../site/data.enc.json | head -c 300
 echo
 echo "確認 ciphertext 是看不懂的 base64，沒有任何明文數字或欄位名稱"
 ```
-Expected: 印出 `{"salt": "...", "iv": "...", "ciphertext": "...", "iterations": 210000}`，`ciphertext` 是一長串 base64、看不出任何原始數字
+Expected: 印出 `{"salt": "...", "iv": "...", "ciphertext": "...", "iterations": 600000}`，`ciphertext` 是一長串 base64、看不出任何原始數字
 
 - [ ] **Step 3: 產生跨語言測試 fixture（給 Task 7 的 JS 測試用）**
 
@@ -995,7 +995,7 @@ test('密碼錯誤時要 reject，不能回傳亂碼或部分結果', async () =
 });
 
 test('迭代次數沿用密文裡記錄的值，不寫死', async () => {
-  assert.equal(fixture.iterations, 210000);
+  assert.equal(fixture.iterations, 600000);
 });
 ```
 
