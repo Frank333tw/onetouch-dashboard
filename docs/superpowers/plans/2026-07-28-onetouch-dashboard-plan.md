@@ -1432,8 +1432,12 @@ border-top:none;border-radius:0 0 8px 8px;padding:24px}
 .note-box{margin-top:20px;background:#FFF8E7;border:1px solid var(--gold);
 border-radius:10px;padding:14px 18px;font-size:13px;color:#5A4A2A}
 .note-box li{margin-bottom:6px}
-</style>
 ```
+
+> ⚠️ **2026-07-31 派工前修正**：上面程式碼區塊原本結尾多了一行 `</style>`——
+> 這是從「內嵌在 HTML 裡的 `<style>` 區塊」寫法複製貼上時殘留的標籤，
+> 不該出現在一個獨立的 `.css` 檔案裡（`style.css` 是透過 `<link
+> rel="stylesheet">` 引入，不是內嵌區塊）。已移除。
 
 - [ ] **Step 2: 寫 index.html**
 
