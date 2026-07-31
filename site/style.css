@@ -1,0 +1,53 @@
+:root{--navy:#0F2545;--navy-soft:#1E3A6B;--gold:#C8973A;--cream:#F4EFE4;
+--paper:#FAF7EF;--line:#D9CFBA;--muted:#6B7280}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:var(--navy);
+font-family:"Noto Sans TC","Helvetica Neue",Arial,sans-serif;line-height:1.7}
+
+/* 密碼閘門 */
+#gate{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+background:var(--cream);z-index:100}
+#gate.hidden{display:none}
+.gate-box{background:var(--paper);border:1px solid var(--line);border-radius:12px;
+padding:40px;max-width:360px;width:90%;text-align:center}
+.gate-box h1{font-size:20px;margin:0 0 20px}
+.gate-box input{width:100%;padding:12px;font-size:16px;border:1px solid var(--line);
+border-radius:8px;margin-bottom:12px;text-align:center;letter-spacing:2px}
+.gate-box button{width:100%;padding:12px;font-size:15px;font-weight:600;color:#fff;
+background:var(--navy);border:none;border-radius:8px;cursor:pointer}
+.gate-box button:hover{background:var(--navy-soft)}
+.gate-error{color:#C0392B;font-size:13px;margin-top:10px;min-height:18px}
+
+/* 主畫面 */
+#app{display:none;max-width:1000px;margin:0 auto;padding:32px 24px 80px}
+#app.visible{display:block}
+header{border-bottom:3px solid var(--navy);padding-bottom:16px;margin-bottom:24px;
+display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
+h1{font-size:26px;margin:0}
+.sub{color:var(--muted);font-size:13px}
+
+/* 日期區間篩選器 */
+.date-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
+.date-filter button{padding:8px 14px;font-size:13px;border:1px solid var(--line);
+background:var(--paper);border-radius:20px;cursor:pointer}
+.date-filter button.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.date-filter input[type=date]{padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}
+
+/* 頁籤 */
+.tabs{display:flex;gap:2px;background:var(--navy);padding:6px 6px 0;border-radius:8px 8px 0 0}
+.tab{padding:10px 18px;font-size:14px;border-radius:6px 6px 0 0;color:#cbd5e1;
+background:var(--navy-soft);cursor:pointer;border:none}
+.tab.active{background:var(--cream);color:var(--navy);font-weight:600}
+.tab-panel{display:none;background:var(--paper);border:1px solid var(--line);
+border-top:none;border-radius:0 0 8px 8px;padding:24px}
+.tab-panel.active{display:block}
+
+/* 圖表區塊 */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:24px}
+.kpi{background:var(--cream);border:1px solid var(--line);border-radius:10px;padding:16px}
+.kpi .n{font-size:26px;font-weight:700;color:var(--navy-soft)}
+.kpi .l{font-size:12px;color:var(--muted);margin-top:4px}
+.chart-wrap{position:relative;height:320px;margin-bottom:16px}
+.note-box{margin-top:20px;background:#FFF8E7;border:1px solid var(--gold);
+border-radius:10px;padding:14px 18px;font-size:13px;color:#5A4A2A}
+.note-box li{margin-bottom:6px}

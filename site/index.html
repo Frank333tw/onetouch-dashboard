@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OneTouch 推廣成效儀表板</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
+  integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
+  crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-box">
+    <h1>OneTouch 推廣成效儀表板</h1>
+    <input type="password" id="password-input" placeholder="請輸入密碼" autocomplete="off">
+    <button id="unlock-btn">解鎖</button>
+    <div class="gate-error" id="gate-error"></div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>OneTouch 推廣成效儀表板</h1>
+    <div class="sub" id="data-range-sub"></div>
+  </header>
+
+  <div class="date-filter" id="date-filter">
+    <button data-preset="week">本週</button>
+    <button data-preset="month">本月</button>
+    <button data-preset="quarter">近三個月</button>
+    <button data-preset="all" class="active">累積至今</button>
+    <input type="date" id="custom-start">
+    <input type="date" id="custom-end">
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="overview">總覽</button>
+    <button class="tab" data-tab="units">單位</button>
+    <button class="tab" data-tab="funnel">轉換路徑</button>
+    <button class="tab" data-tab="tools">工具</button>
+    <button class="tab" data-tab="devices">裝置</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-overview">
+    <div class="kpis" id="kpi-cards"></div>
+    <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+  </div>
+
+  <div class="tab-panel" id="panel-units">
+    <div class="chart-wrap"><canvas id="chart-units"></canvas></div>
+    <div class="note-box"><ul id="unit-notes"></ul></div>
+  </div>
+
+  <div class="tab-panel" id="panel-funnel">
+    <div class="chart-wrap"><canvas id="chart-funnel"></canvas></div>
+    <div class="chart-wrap"><canvas id="chart-feedback-funnel"></canvas></div>
+  </div>
+
+  <div class="tab-panel" id="panel-tools">
+    <div class="chart-wrap"><canvas id="chart-tools"></canvas></div>
+  </div>
+
+  <div class="tab-panel" id="panel-devices">
+    <div class="chart-wrap"><canvas id="chart-devices"></canvas></div>
+  </div>
+</div>
+
+<script type="module" src="dashboard.js"></script>
+</body>
+</html>
