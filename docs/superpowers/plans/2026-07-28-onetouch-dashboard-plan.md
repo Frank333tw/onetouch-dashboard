@@ -652,7 +652,7 @@ def build_days_by_device(rows):
 cd "/Users/frank/Desktop/claude code/onetouch-dashboard/scripts"
 .venv/bin/python -m pytest tests/test_transform_daily.py -v
 ```
-Expected: PASS，8 passed
+Expected: PASS，7 passed
 
 - [ ] **Step 5: Commit**
 
