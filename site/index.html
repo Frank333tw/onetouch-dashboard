@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>OneTouch 推廣成效儀表板</title>
 <link rel="stylesheet" href="style.css">
+<!-- 這個 script 標籤刻意不加 defer/async：它是一般的阻塞式 script，
+     保證在 parser 走到 dashboard.js（type="module"，預設 defer 語意）之前
+     就把全域的 window.Chart 準備好。加 defer/async 或把這行搬到
+     dashboard.js 之後，都會讓 dashboard.js 執行時 Chart 還沒定義。 -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
   integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
   crossorigin="anonymous"></script>
