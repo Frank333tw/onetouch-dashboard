@@ -956,9 +956,16 @@ if __name__ == "__main__":
 
 - [ ] **Step 4: 執行產生 fixture**
 
+> ⚠️ **2026-07-31 實作時修正**：`python tests/generate_test_fixture.py` 這種
+> 「直接跑腳本路徑」的方式會失敗（`ModuleNotFoundError: No module named
+> 'crypto_utils'`）——Python 直接執行某個檔案時，只會把**該檔案自己所在的
+> 目錄**（`scripts/tests/`）加進 `sys.path`，不是目前工作目錄
+> （`scripts/`），所以找不到同層的 `crypto_utils.py`。改用 `-m` 模組執行
+> 方式，讓目前工作目錄被加進 `sys.path` 才行得通。
+
 ```bash
 cd "/Users/frank/Desktop/claude code/onetouch-dashboard/scripts"
-.venv/bin/python tests/generate_test_fixture.py
+.venv/bin/python -m tests.generate_test_fixture
 cat ../site/tests/fixtures/sample.enc.json
 ```
 Expected: 印出加密後的 JSON 結構，且終端機印出測試密碼與預期解密結果（Task 7 會用到這兩個值）
