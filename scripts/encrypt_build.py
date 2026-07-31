@@ -7,6 +7,7 @@
 import json
 import os
 import sys
+import tempfile
 
 from config import CACHE_PATH, ENCRYPTED_DATA_PATH
 from crypto_utils import encrypt_json
@@ -20,12 +21,27 @@ def main():
     if not CACHE_PATH.exists():
         sys.exit(f"找不到 {CACHE_PATH}，請先執行 fetch_daily.py")
 
-    data = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
-    enc = encrypt_json(data, password)
+    try:
+        data = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        sys.exit(f"找不到有效的快取資料，{CACHE_PATH} 內容無法解析為 JSON")
 
+    enc = encrypt_json(data, password)
+    content = json.dumps(enc, ensure_ascii=False, indent=2)
+
+    # 原子寫入：先寫暫存檔再 rename，避免 CI 排程執行中途被中斷時
+    # 留下損毀的檔案——這是公開 repo 裡唯一會被 commit 的資料檔。
     ENCRYPTED_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
-    ENCRYPTED_DATA_PATH.write_text(json.dumps(enc, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"已寫入 {ENCRYPTED_DATA_PATH}（{len(json.dumps(enc))} bytes）")
+    fd, tmp_path = tempfile.mkstemp(dir=ENCRYPTED_DATA_PATH.parent, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        os.replace(tmp_path, ENCRYPTED_DATA_PATH)
+    except BaseException:
+        os.unlink(tmp_path)
+        raise
+
+    print(f"已寫入 {ENCRYPTED_DATA_PATH}（{len(content)} bytes）")
 
 
 if __name__ == "__main__":
