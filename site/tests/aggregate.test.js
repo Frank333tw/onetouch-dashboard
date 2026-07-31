@@ -84,6 +84,16 @@ test('buildFeedbackFunnel 四階段', () => {
   assert.deepEqual(funnel.map((s) => s.count), [4, 1, 1, 0]);
 });
 
+test('buildFeedbackFunnel 前一階段為 0 時，留存率回 null 不是 0 或 NaN', () => {
+  const zeroFirstStage = [
+    { date: '2026-07-01', feedback_opened: 0, feedback_page2: 0,
+      feedback_submitted: 0, feedback_pdf: 0 },
+  ];
+  const funnel = buildFeedbackFunnel(zeroFirstStage);
+  assert.equal(funnel[0].retention_from_prev, null, '第一階段沒有前一階段');
+  assert.equal(funnel[1].retention_from_prev, null, '前一階段是 0，不能除以 0');
+});
+
 test('buildDevices 計算佔比', () => {
   const deviceDays = [
     { date: '2026-07-01', category: 'desktop', sessions: 6 },
@@ -93,6 +103,11 @@ test('buildDevices 計算佔比', () => {
   const desktop = devices.find((d) => d.category === 'desktop');
   assert.equal(desktop.sessions, 6);
   assert.equal(desktop.share, 0.6);
+});
+
+test('buildDevices 總數為 0 時，佔比回 null 不是 0 或 NaN', () => {
+  const devices = buildDevices([{ date: '2026-07-01', category: 'desktop', sessions: 0 }]);
+  assert.equal(devices[0].share, null);
 });
 
 test('buildTrend 回傳每日序列供折線圖使用', () => {
