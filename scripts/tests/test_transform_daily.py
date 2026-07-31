@@ -112,3 +112,18 @@ def test_build_days_by_device():
     assert len(result) == 3
     d1 = next(r for r in result if r["date"] == "2026-07-01" and r["category"] == "desktop")
     assert d1["sessions"] == 10
+
+
+def test_build_days_drops_event_and_page_data_for_dates_missing_from_totals():
+    """totals_rows 是唯一保證的完整日期清單（GA4 對範圍內每一天都會回傳
+    sessions/activeUsers，即使是 0）。event_rows／page_rows 出現但 totals_rows
+    沒有的日期，資料會被丟棄，不會憑空長出新的一天——這是刻意設計，不是漏洞，
+    但先前沒有測試明文保證這件事。"""
+    totals_rows = [{"dims": ["20260701"], "metrics": ["1", "1"]}]
+    event_rows = [{"dims": ["20260703", "tool_open"], "metrics": ["7"]}]
+    page_rows = [{"dims": ["20260703", "/hub/contact"], "metrics": ["4"]}]
+
+    days = build_days(totals_rows, event_rows, page_rows)
+
+    assert len(days) == 1
+    assert days[0]["date"] == "2026-07-01"
