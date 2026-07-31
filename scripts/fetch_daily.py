@@ -30,7 +30,7 @@ def collect(client: GAClient, start: str, end: str) -> dict:
     devices = client.run(["date", "deviceCategory"], ["sessions"], start, end)
 
     return {
-        "days": td.build_days(totals, events, pages),
+        "days": td.build_days(totals, events, pages, start, end),
         "days_by_unit": td.build_days_by_unit(units),
         "days_by_tool": td.build_days_by_tool(pages),
         "days_by_device": td.build_days_by_device(devices),

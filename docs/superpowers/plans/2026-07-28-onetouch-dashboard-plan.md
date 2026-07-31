@@ -418,6 +418,22 @@ git commit -m "feat: 加密核心 crypto_utils（PBKDF2+AES-GCM），前後端�
 
 原始資料格式約定（跟 `recruitment-web` 月報腳本一致）：`ga_client` 的每個查詢回傳 `list[dict]`，每筆為 `{"dims": [str, ...], "metrics": [str, ...]}`。GA4 的 `date` 維度回傳格式是 `YYYYMMDD`（無分隔線），需要轉成 `YYYY-MM-DD`。
 
+> ⚠️ **2026-07-31 實作後修正（Task 4/5 對真實 API 驗證時發現）**：下方 Step 1/3
+> 的原始版本裡，`build_days` 只用 `totals_rows` 出現過的日期決定範圍。實測發現
+> **GA4 對零活動的日期完全不回傳任何列**（不是回傳全 0 的列，是整天憑空消失）
+> ——2026-07-01~07-30 範圍內，07-05、07-10、07-11、07-12 這四天因零活動被
+> GA4 省略。這牴觸本專案核心原則「查不到」與「真的是 0」必須有分別：零活動
+> 的日子在原始設計裡會直接從 `days[]` 消失，跟「這段時間沒查詢」沒有區別，
+> 未來時間趨勢折線圖會出現無法解釋的斷點。
+>
+> 修正：`build_days` 簽章加上 `start`/`end` 兩個參數，先用 `[start, end]`
+> 建立完整的零值骨架（每一天都有紀錄），再用查詢結果覆蓋——不再只看
+> `totals_rows` 裡出現哪些日期。呼叫端 `fetch_daily.py` 的 `collect()`
+> 也同步改成 `td.build_days(totals, events, pages, start, end)`。
+> `build_days_by_unit`／`build_days_by_tool`／`build_days_by_device`
+> 不受影響（這三個是依單位/工具/裝置分組，不是逐日排列，不需要零值骨架）。
+> 下方 Step 1/3 保留原始版本作為歷史記錄；實際程式碼以 commit 為準。
+
 - [ ] **Step 1: 寫失敗的測試**
 
 建立 `scripts/tests/test_transform_daily.py`：

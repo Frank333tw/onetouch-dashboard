@@ -1,9 +1,20 @@
 """GA4 原始 rows → 每日粒度中繼結構。純函式，無網路、無檔案 IO。"""
 
+import datetime as dt
+
 
 def format_date(yyyymmdd: str) -> str:
     """GA4 的 date 維度回傳 '20260701' 這種無分隔格式，轉成 '2026-07-01'。"""
     return f"{yyyymmdd[:4]}-{yyyymmdd[4:6]}-{yyyymmdd[6:8]}"
+
+
+def _date_range(start: str, end: str):
+    """列舉 start~end（含頭尾）的每一天，'YYYY-MM-DD' 字串。"""
+    cur = dt.date.fromisoformat(start)
+    last = dt.date.fromisoformat(end)
+    while cur <= last:
+        yield cur.isoformat()
+        cur += dt.timedelta(days=1)
 
 
 # 事件名稱 → days[] 裡的欄位名稱
@@ -27,22 +38,32 @@ _DAY_FIELD_DEFAULTS = {
 }
 
 
-def build_days(totals_rows, event_rows, page_rows):
-    """合併三種查詢結果成「每天一筆」的紀錄。
+def build_days(totals_rows, event_rows, page_rows, start, end):
+    """合併三種查詢結果成「每天一筆」的紀錄，範圍固定為 start~end 的每一天。
+
+    ⚠️ GA4 的 date 維度查詢會直接省略某天全部指標皆為 0 的列（不是回傳一筆
+    全 0 的紀錄，是完全不出現這一天）。實測 2026-07-01~07-30 範圍內，
+    07-05、07-10、07-11、07-12 這四天因零活動被 GA4 整天省略。因此不能只看
+    totals_rows 裡出現哪些日期——用 start/end 先建立完整的零值骨架，
+    再用查詢結果覆蓋，才能保證範圍內每一天都有紀錄，維持「查不到」與
+    「真的是 0」的區別（真的是 0 的日子要以 sessions=0 的紀錄存在，
+    不能整天從 days[] 裡消失）。
 
     totals_rows: [{dims:[date], metrics:[sessions, activeUsers]}]
     event_rows:  [{dims:[date, eventName], metrics:[count]}]
     page_rows:   [{dims:[date, pagePath], metrics:[views]}]
+    start, end:  'YYYY-MM-DD'，含頭尾
     """
-    days = {}
+    days = {
+        d: {"date": d, "sessions": 0, "active_users": 0, **_DAY_FIELD_DEFAULTS}
+        for d in _date_range(start, end)
+    }
+
     for r in totals_rows:
         date = format_date(r["dims"][0])
-        days[date] = {
-            "date": date,
-            "sessions": int(r["metrics"][0]),
-            "active_users": int(r["metrics"][1]),
-            **_DAY_FIELD_DEFAULTS,
-        }
+        if date in days:
+            days[date]["sessions"] = int(r["metrics"][0])
+            days[date]["active_users"] = int(r["metrics"][1])
 
     for r in event_rows:
         date = format_date(r["dims"][0])
