@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { decryptData } from '../decrypt.js';
+import { decryptData, DecryptionError } from '../decrypt.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixture = JSON.parse(
@@ -18,8 +18,13 @@ test('用正確密碼解密 Python 產生的密文，結果要跟 Python 端一�
   });
 });
 
-test('密碼錯誤時要 reject，不能回傳亂碼或部分結果', async () => {
-  await assert.rejects(() => decryptData(fixture, 'wrong-password'));
+test('密碼錯誤時要 reject 成 DecryptionError，不能回傳亂碼或部分結果', async () => {
+  await assert.rejects(() => decryptData(fixture, 'wrong-password'), DecryptionError);
+});
+
+test('密文格式無效（iterations 被竄改）時也要 reject 成同一種 DecryptionError', async () => {
+  const tampered = { ...fixture, iterations: 1 };
+  await assert.rejects(() => decryptData(tampered, 'test-password-123'), DecryptionError);
 });
 
 test('迭代次數沿用密文裡記錄的值，不寫死', async () => {

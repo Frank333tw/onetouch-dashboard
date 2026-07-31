@@ -1,6 +1,12 @@
 // 瀏覽器端解密。參數必須跟 scripts/crypto_utils.py 逐字對應：
 // PBKDF2-HMAC-SHA256、salt/iv 皆為 base64、AES-GCM 256-bit 金鑰。
 
+// 對應 Python 端 crypto_utils.py 的 DecryptionError——密碼錯誤、密文格式
+// 無效、iterations 缺漏等各種失敗原因，呼叫端只需要處理這一種例外，
+// 不用認得 DOMException 的各種子型別（OperationError／InvalidCharacterError
+// 等），訊息也不會外洩明文或金鑰內容。
+export class DecryptionError extends Error {}
+
 function base64ToBytes(b64) {
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
@@ -11,32 +17,37 @@ function base64ToBytes(b64) {
 /**
  * @param {{salt: string, iv: string, ciphertext: string, iterations: number}} encBlob
  * @param {string} password
- * @returns {Promise<any>} 解密後 parse 好的 JSON；密碼錯誤時 reject
+ * @returns {Promise<any>} 解密後 parse 好的 JSON
+ * @throws {DecryptionError} 密碼錯誤或密文格式無效時
  */
 export async function decryptData(encBlob, password) {
-  const salt = base64ToBytes(encBlob.salt);
-  const iv = base64ToBytes(encBlob.iv);
-  const ciphertext = base64ToBytes(encBlob.ciphertext);
+  try {
+    const salt = base64ToBytes(encBlob.salt);
+    const iv = base64ToBytes(encBlob.iv);
+    const ciphertext = base64ToBytes(encBlob.ciphertext);
 
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(password),
-    'PBKDF2',
-    false,
-    ['deriveKey']
-  );
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(password),
+      'PBKDF2',
+      false,
+      ['deriveKey']
+    );
 
-  const key = await crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: encBlob.iterations, hash: 'SHA-256' },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['decrypt']
-  );
+    const key = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt, iterations: encBlob.iterations, hash: 'SHA-256' },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt']
+    );
 
-  // 密碼錯誤時，AES-GCM 的驗證標籤（authentication tag）比對會失敗，
-  // crypto.subtle.decrypt 直接 reject——不會回傳看起來正常但其實是亂碼的結果。
-  const plaintextBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
-  const plaintextStr = new TextDecoder().decode(plaintextBuf);
-  return JSON.parse(plaintextStr);
+    // 密碼錯誤時，AES-GCM 的驗證標籤（authentication tag）比對會失敗，
+    // crypto.subtle.decrypt 直接 reject——不會回傳看起來正常但其實是亂碼的結果。
+    const plaintextBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+    const plaintextStr = new TextDecoder().decode(plaintextBuf);
+    return JSON.parse(plaintextStr);
+  } catch (err) {
+    throw new DecryptionError('解密失敗：密碼錯誤或密文格式無效');
+  }
 }
