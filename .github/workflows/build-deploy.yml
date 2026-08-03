@@ -1,0 +1,75 @@
+name: Build and Deploy Dashboard
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # 每日 UTC 00:00 = 台灣時間早上 8:00
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 安裝 Python 依賴
+        run: pip install -r scripts/requirements.txt
+
+      - name: 還原 GA4 憑證
+        run: |
+          mkdir -p /tmp/onetouch-ga-cred
+          echo "$GA_CLIENT_SECRET_JSON" > /tmp/onetouch-ga-cred/client_secret.json
+          echo "$GA_TOKEN_JSON" > /tmp/onetouch-ga-cred/token.json
+        env:
+          GA_CLIENT_SECRET_JSON: ${{ secrets.GA_CLIENT_SECRET_JSON }}
+          GA_TOKEN_JSON: ${{ secrets.GA_TOKEN_JSON }}
+
+      - name: 抓取每日粒度資料
+        run: |
+          cd scripts
+          python fetch_daily.py
+        env:
+          ONETOUCH_GA_CRED_DIR: /tmp/onetouch-ga-cred
+
+      - name: 加密建置
+        run: |
+          cd scripts
+          python encrypt_build.py
+        env:
+          DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
+
+      - name: Commit 加密後的資料檔
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add site/data.enc.json
+          git diff --staged --quiet && echo "資料無變化，略過 commit" || git commit -m "chore: 自動更新每日資料 $(date -u +%Y-%m-%d)"
+          git push
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
