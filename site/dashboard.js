@@ -68,7 +68,7 @@ function renderTrend(trend) {
   });
 }
 
-function renderUnits(units) {
+function renderUnits(units, notes) {
   destroyChart('units');
   charts.units = new Chart(document.getElementById('chart-units'), {
     type: 'bar',
@@ -90,10 +90,9 @@ function renderUnits(units) {
       } } },
     },
   });
-  const notes = [
-    '單位比較會低估回訪使用量：GA4 於 session 開始時歸因來源，主管第一次用單位短網址進入會正確歸戶，之後直接開網址或從書籤進入的 session 會歸到「直接進入」。',
-    '長青、益盛自 2026-07-23 起推廣進度 pending、暫緩，兩單位數字偏低或為零是「尚未開始」，不代表工具或推廣效果不佳。',
-  ];
+  // 註記文字來自 scripts/config.py 的 REPORT_NOTES，經 fetch_daily.py 寫進
+  // 資料檔的 notes 欄位——單一資料來源，不在這裡寫死第二份（這是隨推廣
+  // 進度會變動的文字，兩份不連動遲早會有一份漏改）。
   document.getElementById('unit-notes').innerHTML = notes.map((n) => `<li>${n}</li>`).join('');
 }
 
@@ -147,7 +146,7 @@ function renderAll(start, end) {
 
   renderKpis(buildKpi(days));
   renderTrend(buildTrend(days));
-  renderUnits(buildUnits(unitDays));
+  renderUnits(buildUnits(unitDays), ALL_DATA.notes || []);
   renderFunnel('chart-funnel', 'funnel', buildFunnel(days));
   renderFunnel('chart-feedback-funnel', 'feedbackFunnel', buildFeedbackFunnel(days));
   renderTools(buildTools(toolDays));
@@ -215,12 +214,22 @@ async function unlock() {
     return;
   }
 
-  document.getElementById('gate').classList.add('hidden');
-  document.getElementById('app').classList.add('visible');
-  setupTabs();
-  setupDateFilter();
-  const [start, end] = presetRange('all', ALL_DATA.meta.rollout_start);
-  renderAll(start, end);
+  // 密碼正確、資料也解密成功了，理論上不該再失敗——但畫面切換與
+  // 圖表渲染若真的出錯（例如未來資料結構意外跟預期不一致），
+  // 不能讓使用者卡在一個沒有任何錯誤訊息的空白畫面。抓到就退回
+  // 密碼輸入畫面並顯示清楚的錯誤，而不是留著半渲染的狀態。
+  try {
+    document.getElementById('gate').classList.add('hidden');
+    document.getElementById('app').classList.add('visible');
+    setupTabs();
+    setupDateFilter();
+    const [start, end] = presetRange('all', ALL_DATA.meta.rollout_start);
+    renderAll(start, end);
+  } catch (e) {
+    document.getElementById('app').classList.remove('visible');
+    document.getElementById('gate').classList.remove('hidden');
+    errorEl.textContent = '資料顯示時發生問題，請重新整理頁面再試';
+  }
 }
 
 document.getElementById('unlock-btn').addEventListener('click', unlock);

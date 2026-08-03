@@ -13,7 +13,7 @@ import datetime as dt
 import json
 
 import transform_daily as td
-from config import CACHE_PATH, ROLLOUT_START
+from config import CACHE_PATH, REPORT_NOTES, ROLLOUT_START
 from ga_client import GAClient
 
 
@@ -49,6 +49,10 @@ def main():
         "last_day": end,
         "generated_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
     }
+    # 單一資料來源：這份文字隨推廣進度會變動（例如哪個單位暫緩），
+    # 只在 config.py 定義一次，經由資料管線帶到前端渲染，
+    # 不要在 dashboard.js 另外寫死一份重複的文字。
+    data["notes"] = REPORT_NOTES
 
     CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
     CACHE_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
