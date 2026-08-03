@@ -195,18 +195,32 @@ async function unlock() {
   const password = document.getElementById('password-input').value;
   const errorEl = document.getElementById('gate-error');
   errorEl.textContent = '';
+
+  // 分成兩段 try/catch：資料載入失敗（網路、檔案不存在）跟密碼錯誤是
+  // 完全不同的問題，混在同一個訊息裡會誤導——尤其本機測試時
+  // data.enc.json 可能還沒產生，這時顯示「密碼錯誤」會讓人誤以為自己
+  // 打錯密碼，跑去重打，但真正的問題是檔案根本不存在。
+  let encBlob;
   try {
-    const encBlob = await loadEncryptedData();
+    encBlob = await loadEncryptedData();
+  } catch (e) {
+    errorEl.textContent = '無法載入資料，請確認網路連線或稍後再試';
+    return;
+  }
+
+  try {
     ALL_DATA = await decryptData(encBlob, password);
-    document.getElementById('gate').classList.add('hidden');
-    document.getElementById('app').classList.add('visible');
-    setupTabs();
-    setupDateFilter();
-    const [start, end] = presetRange('all', ALL_DATA.meta.rollout_start);
-    renderAll(start, end);
   } catch (e) {
     errorEl.textContent = '密碼錯誤，請重新輸入';
+    return;
   }
+
+  document.getElementById('gate').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+  setupTabs();
+  setupDateFilter();
+  const [start, end] = presetRange('all', ALL_DATA.meta.rollout_start);
+  renderAll(start, end);
 }
 
 document.getElementById('unlock-btn').addEventListener('click', unlock);
