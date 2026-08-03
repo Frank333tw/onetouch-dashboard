@@ -10,6 +10,7 @@ const GOLD = '#C8973A';
 
 let ALL_DATA = null; // { days, days_by_unit, days_by_tool, days_by_device, meta }
 let charts = {};
+let currentRange = null; // [start, end]，供切換頁籤時重繪目前圖表用
 
 async function loadEncryptedData() {
   const res = await fetch('data.enc.json');
@@ -139,6 +140,7 @@ function renderDevices(devices) {
 }
 
 function renderAll(start, end) {
+  currentRange = [start, end];
   const days = filterRange(ALL_DATA.days, start, end);
   const unitDays = ALL_DATA.days_by_unit.filter((d) => d.date >= start && d.date <= end);
   const toolDays = ALL_DATA.days_by_tool.filter((d) => d.date >= start && d.date <= end);
@@ -162,6 +164,16 @@ function setupTabs() {
       document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById(`panel-${btn.dataset.tab}`).classList.add('active');
+      // Chart.js 在畫布所在的 .tab-panel 還是 display:none 時建立圖表，
+      // 量不到實際尺寸會畫成空白（且事後用 resize()/update() 修補時機
+      // 不穩定，實測過會有數百毫秒到數秒的延遲，不可靠）。這裡改成
+      // 先讓目前頁籤變成可見，再整個重新呼叫 renderAll()——沿用一開始
+      // 就驗證正常的「銷毀舊圖表再建立新的」模式，保證使用者正在看的
+      // 頁籤，圖表一定是在畫布真正可見時才建立。其餘隱藏頁籤的圖表
+      // 也會一併重建（一樣建立在隱藏畫布裡），但沒人正在看，等下次
+      // 切過去時本來就會再重繪一次，不影響正確性，資料量小也不值得
+      // 為了省這點運算另外做「只重繪目前頁籤」的複雜邏輯。
+      if (currentRange) renderAll(currentRange[0], currentRange[1]);
     });
   });
 }
