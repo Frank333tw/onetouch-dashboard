@@ -11,9 +11,11 @@ const GOLD = '#C8973A';
 let ALL_DATA = null; // { days, days_by_unit, days_by_tool, days_by_device, meta }
 let charts = {};
 let currentRange = null; // [start, end]，供切換頁籤時重繪目前圖表用
+let listenersInitialized = false; // 見 unlock() 內說明
 
 async function loadEncryptedData() {
   const res = await fetch('data.enc.json');
+  if (!res.ok) throw new Error(`data.enc.json 載入失敗（HTTP ${res.status}）`);
   return res.json();
 }
 
@@ -154,7 +156,12 @@ function renderAll(start, end) {
   renderTools(buildTools(toolDays));
   renderDevices(buildDevices(deviceDays));
 
-  document.getElementById('data-range-sub').textContent = `顯示區間：${start} ～ ${end}`;
+  // 顯示資料實際更新到哪一天：這是排程失敗時唯一會被使用者看見的線索
+  // ——排程若壞掉，網站會繼續正常顯示「上一次成功」的資料（刻意的
+  // fail-closed 設計），畫面本身不會出現任何錯誤。沒有這行，資料卡在
+  // 半年前會被誤讀成「這陣子用量下滑」，而不是「排程壞了」。
+  document.getElementById('data-range-sub').textContent =
+    `顯示區間：${start} ～ ${end}（資料更新至 ${ALL_DATA.meta.last_day}）`;
 }
 
 function setupTabs() {
@@ -233,8 +240,15 @@ async function unlock() {
   try {
     document.getElementById('gate').classList.add('hidden');
     document.getElementById('app').classList.add('visible');
-    setupTabs();
-    setupDateFilter();
+    // 只在第一次成功解鎖時掛監聽器：若這個 try 區塊之後失敗、使用者
+    // 退回密碼畫面重新輸入一次，第二次成功不能再掛一組——否則頁籤
+    // 按鈕、日期篩選按鈕都會疊加重複的 listener，每點一次觸發兩次
+    // （甚至更多次）renderAll()，一路把圖表銷毀重建好幾遍。
+    if (!listenersInitialized) {
+      setupTabs();
+      setupDateFilter();
+      listenersInitialized = true;
+    }
     const [start, end] = presetRange('all', ALL_DATA.meta.rollout_start);
     renderAll(start, end);
   } catch (e) {

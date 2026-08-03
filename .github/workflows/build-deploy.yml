@@ -5,11 +5,6 @@ on:
     - cron: '0 0 * * *'   # 每日 UTC 00:00 = 台灣時間早上 8:00
   workflow_dispatch: {}
 
-permissions:
-  contents: write
-  pages: write
-  id-token: write
-
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -17,6 +12,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -24,8 +21,18 @@ jobs:
         with:
           python-version: '3.12'
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
       - name: 安裝 Python 依賴
         run: pip install -r scripts/requirements.txt
+
+      - name: 執行測試（Python）
+        run: cd scripts && python -m pytest tests/ -v
+
+      - name: 執行測試（前端 JS）
+        run: cd site && node --test
 
       - name: 還原 GA4 憑證
         run: |
@@ -55,8 +62,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add site/data.enc.json
-          git diff --staged --quiet && echo "資料無變化，略過 commit" || git commit -m "chore: 自動更新每日資料 $(date -u +%Y-%m-%d)"
-          git push
+          if git diff --staged --quiet; then
+            echo "資料無變化，略過 commit"
+          else
+            git commit -m "chore: 自動更新每日資料 $(date -u +%Y-%m-%d)"
+            # main 若在這次執行期間被別的 push 更新過，直接 push 會被拒絕；
+            # 用 rebase 重新對齊一次再推，避免單純的時序競爭讓整次排程失敗、
+            # 連帶讓網站也沒更新到（deploy job 依賴 build job 成功）。
+            git pull --rebase origin main
+            git push
+          fi
 
       - uses: actions/configure-pages@v5
 
@@ -67,6 +82,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

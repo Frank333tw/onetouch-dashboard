@@ -27,6 +27,13 @@ ENCRYPTED_DATA_PATH = SITE_DIR / "data.enc.json"
 # 推廣起始日：抓取範圍從這天開始
 ROLLOUT_START = "2026-07-01"
 
+# ⚠️ 這幾份對照表（UNIT_LABELS／TOOL_LABELS／DEVICE_LABELS）目前沒有任何
+# 生產程式碼路徑引用——fetch_daily.py／transform_daily.py 都不匯入它們，
+# 只有 tests/test_config.py 在測。使用者實際看到的中文標籤來自
+# site/aggregate.js 自己的同名對照表（那份才是真正生效、需要跟這裡手動
+# 保持一致的版本）。之後若要改標籤文字，兩邊都要改；若之後要讓這裡真正
+# 成為單一資料來源，可仿照 REPORT_NOTES 的做法經 fetch_daily.py 的
+# meta 欄位傳到前端。
 UNIT_LABELS = {
     "taian": "台安",
     "yisheng": "益盛",
@@ -53,6 +60,26 @@ DEVICE_LABELS = {
 
 # 四個推廣單位固定出現在單位比較區塊，即使數字為零
 TRACKED_UNITS = ["taian", "yisheng", "changqing", "feiang"]
+
+# transform_daily.py 實際會處理的事件名稱——查詢 GA4 時用來篩選 eventName，
+# 避免把 page_view／scroll／session_start 這類 GA4 自動收集、我們沒在用的
+# 事件也撈進來，讓查詢結果的筆數不必要地變大（GA4 單次查詢有筆數上限，
+# 篩掉用不到的事件等於買到更長的安全邊際）。
+TRACKED_EVENTS = [
+    "tool_open",
+    "result_view",
+    "result_generate_image",
+    "result_download",
+    "result_share",
+    "result_feedback_opened",
+    "result_feedback_page2_view",
+    "result_feedback_submitted",
+    "result_feedback_pdf_download",
+]
+
+# 單位比較區塊只用到這兩個事件（見 transform_daily.build_days_by_unit），
+# 篩選範圍比 TRACKED_EVENTS 更小，進一步降低這個查詢的筆數。
+UNIT_TRACKED_EVENTS = ["tool_open", "result_view"]
 
 REPORT_NOTES = [
     "單位比較會低估回訪使用量：GA4 於 session 開始時歸因來源，"
