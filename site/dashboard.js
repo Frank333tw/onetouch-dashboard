@@ -100,7 +100,7 @@ function renderBarRows(containerId, rows) {
   const max = Math.max(1, ...rows.map((r) => r.value));
   document.getElementById(containerId).innerHTML = rows.map((r) => `
     <div class="bar-row">
-      <span class="label">${r.label}</span>
+      <span class="label">${escapeHtml(r.label)}</span>
       <div class="bar-track"><div class="bar-fill" style="width:${(r.value / max * 100).toFixed(0)}%"></div></div>
       <span class="val">${r.display}</span>
     </div>
@@ -135,12 +135,15 @@ function renderFeedbackFilterOptions() {
   document.getElementById('feedback-filter-recommend').value = feedbackFilters.recommend;
 }
 
-// Notion 裡的問卷欄位（受測者姓名、留言、主管姓名等）是求職者/管理者
-// 自由填寫的文字，不是開發者自己寫死的內容，也不受 enum 限制——
-// 不能信任其中不含 HTML/script 標籤。這裡是全站唯一會把「不受信任的
-// 外部文字」直接塞進 innerHTML 的地方，一定要逐一escape，避免
-// stored XSS（例如姓名欄位填 <img onerror=...> 會在每個打開此頁籤
-// 的主管瀏覽器裡執行）。
+// Notion 裡的問卷欄位（受測者姓名、留言、主管姓名、Q4 改善項目選項等）
+// 是求職者/管理者自由填寫的文字，不是開發者自己寫死的內容，也不受
+// enum 限制——不能信任其中不含 HTML/script 標籤。逐筆紀錄卡片
+// （recordCardHtml）與改善項目排行的長條圖標籤（renderBarRows，用於
+// renderImprovementRanking）都會把這類「不受信任的外部文字」直接塞進
+// innerHTML，兩處都要逐一 escape，避免 stored XSS（例如姓名欄位填
+// <img onerror=...> 會在每個打開此頁籤的主管瀏覽器裡執行）。之後若再
+// 新增會把 Notion 欄位塞進 innerHTML 的地方，也要記得套用同一個
+// escapeHtml。
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -181,6 +184,7 @@ function recordCardHtml(r) {
         <div><dt>Q2 開始思考轉變</dt><dd>${escapeHtml(r.adv_q2 || '（未填）')}</dd></div>
         <div><dt>Q3 願意了解機會</dt><dd>${escapeHtml(r.adv_q3 || '（未填）')}</dd></div>
         <div><dt>Q4 最希望改善項目</dt><dd>${chipsHtml(r.adv_q4)}</dd></div>
+        ${r.adv_q4_other ? `<div><dt>Q4 其他文字</dt><dd>${escapeHtml(r.adv_q4_other)}</dd></div>` : ''}
         <div><dt>Q5 希望提供資訊</dt><dd>${chipsHtml(r.adv_q5)}</dd></div>
       </div>
     </div>
