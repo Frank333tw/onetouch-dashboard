@@ -9,7 +9,7 @@ import os
 import sys
 import tempfile
 
-from config import CACHE_PATH, ENCRYPTED_DATA_PATH
+from config import CACHE_PATH, ENCRYPTED_DATA_PATH, NOTION_CACHE_PATH
 from crypto_utils import encrypt_json
 
 
@@ -20,11 +20,20 @@ def main():
 
     if not CACHE_PATH.exists():
         sys.exit(f"找不到 {CACHE_PATH}，請先執行 fetch_daily.py")
+    if not NOTION_CACHE_PATH.exists():
+        sys.exit(f"找不到 {NOTION_CACHE_PATH}，請先執行 fetch_notion.py")
 
     try:
         data = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         sys.exit(f"找不到有效的快取資料，{CACHE_PATH} 內容無法解析為 JSON")
+
+    try:
+        notion_data = json.loads(NOTION_CACHE_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        sys.exit(f"找不到有效的快取資料，{NOTION_CACHE_PATH} 內容無法解析為 JSON")
+
+    data["feedback_records"] = notion_data["feedback_records"]
 
     enc = encrypt_json(data, password)
     content = json.dumps(enc, ensure_ascii=False, indent=2)
