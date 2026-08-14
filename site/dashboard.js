@@ -127,12 +127,24 @@ function renderFeedbackFilterOptions() {
   const officeSelect = document.getElementById('feedback-filter-office');
   const toolSelect = document.getElementById('feedback-filter-tool');
   officeSelect.innerHTML = ['<option value="all">單位：全部</option>']
-    .concat(offices.map((o) => `<option value="${o}">${o}</option>`)).join('');
+    .concat(offices.map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`)).join('');
   toolSelect.innerHTML = ['<option value="all">工具：全部</option>']
-    .concat(tools.map((t) => `<option value="${t}">${t}</option>`)).join('');
+    .concat(tools.map((t) => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`)).join('');
   officeSelect.value = feedbackFilters.office;
   toolSelect.value = feedbackFilters.tool;
   document.getElementById('feedback-filter-recommend').value = feedbackFilters.recommend;
+}
+
+// Notion 裡的問卷欄位（受測者姓名、留言、主管姓名等）是求職者/管理者
+// 自由填寫的文字，不是開發者自己寫死的內容，也不受 enum 限制——
+// 不能信任其中不含 HTML/script 標籤。這裡是全站唯一會把「不受信任的
+// 外部文字」直接塞進 innerHTML 的地方，一定要逐一escape，避免
+// stored XSS（例如姓名欄位填 <img onerror=...> 會在每個打開此頁籤
+// 的主管瀏覽器裡執行）。
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
 }
 
 function starsHtml(score) {
@@ -141,7 +153,7 @@ function starsHtml(score) {
 }
 
 function chipsHtml(values) {
-  return values.length ? values.map((v) => `<span class="chip">${v}</span>`).join('') : '（未填）';
+  return values.length ? values.map((v) => `<span class="chip">${escapeHtml(v)}</span>`).join('') : '（未填）';
 }
 
 function recordCardHtml(r) {
@@ -149,11 +161,11 @@ function recordCardHtml(r) {
     <div class="record collapsed" data-id="${r.id}">
       <div class="record-top">
         <div class="record-who">
-          <span class="name">${r.cand_name}</span>
-          <span class="meta">${r.cand_age}歲・${r.cand_occupation}・${r.mgr_region}・${r.mgr_office}（${r.mgr_name} 主管）</span>
+          <span class="name">${escapeHtml(r.cand_name)}</span>
+          <span class="meta">${r.cand_age}歲・${escapeHtml(r.cand_occupation)}・${escapeHtml(r.mgr_region)}・${escapeHtml(r.mgr_office)}（${escapeHtml(r.mgr_name)} 主管）</span>
         </div>
         <div class="record-tags">
-          <span class="tag tool">${r.tool_title}</span>
+          <span class="tag tool">${escapeHtml(r.tool_title)}</span>
           <span class="tag ${r.cand_recommend ? 'rec-yes' : 'rec-no'}">${r.cand_recommend ? '推薦' : '未推薦'}</span>
         </div>
       </div>
@@ -162,12 +174,12 @@ function recordCardHtml(r) {
         <span>流程體驗 <span class="stars">${starsHtml(r.cand_process)}</span></span>
         <span>${r.submitted_at.slice(0, 10)} 提交</span>
       </div>
-      <p class="comment"><span class="q">留言：</span>${r.cand_comment || '（未填）'}</p>
+      <p class="comment"><span class="q">留言：</span>${escapeHtml(r.cand_comment || '（未填）')}</p>
       <span class="toggle">查看完整問卷</span>
       <div class="detail">
-        <div><dt>Q1 更了解工作現況</dt><dd>${r.adv_q1 || '（未填）'}</dd></div>
-        <div><dt>Q2 開始思考轉變</dt><dd>${r.adv_q2 || '（未填）'}</dd></div>
-        <div><dt>Q3 願意了解機會</dt><dd>${r.adv_q3 || '（未填）'}</dd></div>
+        <div><dt>Q1 更了解工作現況</dt><dd>${escapeHtml(r.adv_q1 || '（未填）')}</dd></div>
+        <div><dt>Q2 開始思考轉變</dt><dd>${escapeHtml(r.adv_q2 || '（未填）')}</dd></div>
+        <div><dt>Q3 願意了解機會</dt><dd>${escapeHtml(r.adv_q3 || '（未填）')}</dd></div>
         <div><dt>Q4 最希望改善項目</dt><dd>${chipsHtml(r.adv_q4)}</dd></div>
         <div><dt>Q5 希望提供資訊</dt><dd>${chipsHtml(r.adv_q5)}</dd></div>
       </div>
@@ -188,6 +200,7 @@ function renderFeedbackRecords() {
 }
 
 function renderFeedback() {
+  feedbackPage = 1;
   const records = currentFeedbackRecords();
   renderFeedbackKpis(buildFeedbackKpi(records));
   renderAdvocacy(buildAdvocacyDistribution(records));
