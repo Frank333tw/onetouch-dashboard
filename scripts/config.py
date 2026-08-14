@@ -19,6 +19,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # 未加密中繼快取的存放位置（gitignored）
 CACHE_DIR = BASE_DIR / "scripts" / ".cache"
 CACHE_PATH = CACHE_DIR / "daily_raw.json"
+NOTION_CACHE_PATH = CACHE_DIR / "notion_raw.json"
 
 # 加密後成品的存放位置（唯一會被 commit 的資料檔）
 SITE_DIR = BASE_DIR / "site"
