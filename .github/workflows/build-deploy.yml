@@ -50,6 +50,14 @@ jobs:
         env:
           ONETOUCH_GA_CRED_DIR: /tmp/onetouch-ga-cred
 
+      - name: 抓取問卷回饋資料
+        run: |
+          cd scripts
+          python fetch_notion.py
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+
       - name: 加密建置
         run: |
           cd scripts
