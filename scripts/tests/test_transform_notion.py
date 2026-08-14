@@ -88,6 +88,12 @@ def test_build_feedback_records_handles_empty_optional_fields():
     page["properties"]["Q1 更了解工作現況"] = _prop_select(None)
     page["properties"]["Q4 最希望改善項目"] = _prop_multi_select([])
     page["properties"]["留言"] = _prop_text("")
+    # Test null number fields
+    page["properties"]["受測者年齡"] = _prop_number(None)
+    page["properties"]["整體體驗星等"] = _prop_number(None)
+    page["properties"]["流程體驗星等"] = _prop_number(None)
+    # Test null date field
+    page["properties"]["提交時間"] = _prop_date(None)
 
     records = build_feedback_records([page])
 
@@ -95,6 +101,10 @@ def test_build_feedback_records_handles_empty_optional_fields():
     assert r["adv_q1"] is None, "未填的 select 要是 None，不能報錯或變成空字串跟'未填'混淆"
     assert r["adv_q4"] == []
     assert r["cand_comment"] == ""
+    assert r["cand_age"] is None, "未填的 number 要是 None"
+    assert r["cand_overall"] is None, "未填的 number 要是 None"
+    assert r["cand_process"] is None, "未填的 number 要是 None"
+    assert r["submitted_at"] is None, "未填的 date 要是 None，即使它是排序鍵"
 
 
 def test_build_feedback_records_sorts_newest_first():
