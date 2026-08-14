@@ -142,6 +142,19 @@ test('buildFeedbackKpi 空陣列時平均值回 null 不是 0', () => {
   assert.equal(kpi.recommend_rate, null);
 });
 
+test('buildFeedbackKpi 包含 null 評分時只計算非 null 的平均值', () => {
+  const records = [
+    { cand_overall: 5, cand_process: 4, cand_recommend: true },
+    { cand_overall: null, cand_process: 3, cand_recommend: false },
+    { cand_overall: 4, cand_process: null, cand_recommend: true },
+  ];
+  const kpi = buildFeedbackKpi(records);
+  assert.equal(kpi.count, 3);
+  assert.equal(kpi.avg_overall, 4.5, '(5 + 4) / 2，null 不計入');
+  assert.equal(kpi.avg_process, 3.5, '(4 + 3) / 2，null 不計入');
+  assert.equal(kpi.recommend_rate, 2/3, '兩筆推薦/三筆共');
+});
+
 test('buildAdvocacyDistribution 只計入有填答的紀錄，未填不計入分母', () => {
   const dist = buildAdvocacyDistribution(FEEDBACK_RECORDS);
   const q1 = dist.find((d) => d.field === 'adv_q1');
@@ -174,6 +187,19 @@ test('filterFeedbackRecords 依推薦與否篩選', () => {
   });
   assert.equal(result.length, 1);
   assert.equal(result[0].id, '2');
+});
+
+test('filterFeedbackRecords 當 submitted_at 為 null 時應排除', () => {
+  const records = [
+    { submitted_at: '2026-08-01T00:00:00.000+08:00', mgr_office: 'A', tool_title: 'DISC' },
+    { submitted_at: null, mgr_office: 'B', tool_title: 'DISC' },
+    { submitted_at: '2026-08-05T00:00:00.000+08:00', mgr_office: 'C', tool_title: 'DISC' },
+  ];
+  const result = filterFeedbackRecords(records, {
+    start: '2026-08-01', end: '2026-08-31', office: 'all', tool: 'all', recommend: 'all',
+  });
+  assert.equal(result.length, 2);
+  assert.equal(result.map((r) => r.mgr_office).join(','), 'A,C');
 });
 
 test('distinctSorted 取不重複值並排序', () => {

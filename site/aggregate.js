@@ -122,7 +122,10 @@ export function buildTrend(days) {
 
 export function buildFeedbackKpi(records) {
   const count = records.length;
-  const avg = (field) => (count ? records.reduce((acc, r) => acc + r[field], 0) / count : null);
+  const avg = (field) => {
+    const answered = records.filter((r) => r[field] !== null && r[field] !== undefined);
+    return answered.length ? answered.reduce((acc, r) => acc + r[field], 0) / answered.length : null;
+  };
   const recommendCount = records.filter((r) => r.cand_recommend).length;
   return {
     count,
@@ -132,9 +135,9 @@ export function buildFeedbackKpi(records) {
   };
 }
 
-// 「算作同意」的選項文字——來自 Notion「測驗結果回饋表紀錄」資料庫
-// adv_q1/adv_q2/adv_q3 三個 select 欄位的實際選項，查證方式見本檔案
-// 對應的 implementation plan Task 6 Step 1。
+// 「算作同意」的選項文字——目前是暫定假設值（尚未對照 Notion 實際 select 選項查證）。
+// 上線前必須執行 implementation plan Task 6 Step 1 查證真實選項文字，
+// 若與此處不同，須同步修正這裡與 aggregate.test.js 的 FEEDBACK_RECORDS 假資料。
 const ADVOCACY_AGREE_OPTIONS = new Set(['同意', '非常同意']);
 
 const ADVOCACY_QUESTIONS = [
@@ -170,6 +173,7 @@ export function buildImprovementRanking(records) {
 
 export function filterFeedbackRecords(records, { start, end, office = 'all', tool = 'all', recommend = 'all' }) {
   return records.filter((r) => {
+    if (!r.submitted_at) return false;
     const date = r.submitted_at.slice(0, 10);
     if (date < start || date > end) return false;
     if (office !== 'all' && r.mgr_office !== office) return false;
