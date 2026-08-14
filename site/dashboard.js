@@ -2,16 +2,22 @@ import { decryptData } from './decrypt.js';
 import {
   filterRange, buildKpi, buildUnits, buildTools, buildFunnel,
   buildFeedbackFunnel, buildDevices, buildTrend,
+  buildFeedbackKpi, buildAdvocacyDistribution, buildImprovementRanking,
+  filterFeedbackRecords, distinctSorted, paginate,
 } from './aggregate.js';
+import { downloadFeedbackExcel } from './export-excel.js';
 
 const NAVY = '#0F2545';
 const NAVY_SOFT = '#1E3A6B';
 const GOLD = '#C8973A';
 
-let ALL_DATA = null; // { days, days_by_unit, days_by_tool, days_by_device, meta }
+let ALL_DATA = null; // { days, days_by_unit, days_by_tool, days_by_device, feedback_records, meta }
 let charts = {};
 let currentRange = null; // [start, end]，供切換頁籤時重繪目前圖表用
 let listenersInitialized = false; // 見 unlock() 內說明
+let feedbackFilters = { office: 'all', tool: 'all', recommend: 'all' };
+let feedbackPage = 1;
+const FEEDBACK_PAGE_SIZE = 10;
 
 async function loadEncryptedData() {
   const res = await fetch('data.enc.json');
@@ -69,6 +75,125 @@ function renderTrend(trend) {
     },
     options: { responsive: true, maintainAspectRatio: false },
   });
+}
+
+function currentFeedbackRecords() {
+  const [start, end] = currentRange;
+  return filterFeedbackRecords(ALL_DATA.feedback_records, { start, end, ...feedbackFilters });
+}
+
+function renderFeedbackKpis(kpi) {
+  const pct = (v) => (v === null ? '—' : `${(v * 100).toFixed(1)}%`);
+  const avg = (v) => (v === null ? '—' : v.toFixed(1));
+  const cards = [
+    [kpi.count, '回收問卷數'],
+    [avg(kpi.avg_overall), '平均整體體驗星等'],
+    [avg(kpi.avg_process), '平均流程體驗星等'],
+    [pct(kpi.recommend_rate), '推薦率'],
+  ];
+  document.getElementById('feedback-kpi-cards').innerHTML = cards
+    .map(([n, l]) => `<div class="kpi"><div class="n">${n}</div><div class="l">${l}</div></div>`)
+    .join('');
+}
+
+function renderBarRows(containerId, rows) {
+  const max = Math.max(1, ...rows.map((r) => r.value));
+  document.getElementById(containerId).innerHTML = rows.map((r) => `
+    <div class="bar-row">
+      <span class="label">${r.label}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${(r.value / max * 100).toFixed(0)}%"></div></div>
+      <span class="val">${r.display}</span>
+    </div>
+  `).join('');
+}
+
+function renderAdvocacy(distribution) {
+  const rows = distribution.map((d) => ({
+    label: d.label.replace(/^Q\d /, ''),
+    value: d.agree_rate === null ? 0 : d.agree_rate * 100,
+    display: d.agree_rate === null ? '—' : `${(d.agree_rate * 100).toFixed(0)}%`,
+  }));
+  renderBarRows('feedback-advocacy', rows);
+}
+
+function renderImprovementRanking(ranking) {
+  const rows = ranking.map((r) => ({ label: r.label, value: r.count, display: String(r.count) }));
+  renderBarRows('feedback-improvement', rows);
+}
+
+function renderFeedbackFilterOptions() {
+  const offices = distinctSorted(ALL_DATA.feedback_records, 'mgr_office');
+  const tools = distinctSorted(ALL_DATA.feedback_records, 'tool_title');
+  const officeSelect = document.getElementById('feedback-filter-office');
+  const toolSelect = document.getElementById('feedback-filter-tool');
+  officeSelect.innerHTML = ['<option value="all">單位：全部</option>']
+    .concat(offices.map((o) => `<option value="${o}">${o}</option>`)).join('');
+  toolSelect.innerHTML = ['<option value="all">工具：全部</option>']
+    .concat(tools.map((t) => `<option value="${t}">${t}</option>`)).join('');
+  officeSelect.value = feedbackFilters.office;
+  toolSelect.value = feedbackFilters.tool;
+  document.getElementById('feedback-filter-recommend').value = feedbackFilters.recommend;
+}
+
+function starsHtml(score) {
+  const full = Math.max(0, Math.min(5, Math.round(score || 0)));
+  return `${'★'.repeat(full)}<span class="dim">${'★'.repeat(5 - full)}</span>`;
+}
+
+function chipsHtml(values) {
+  return values.length ? values.map((v) => `<span class="chip">${v}</span>`).join('') : '（未填）';
+}
+
+function recordCardHtml(r) {
+  return `
+    <div class="record collapsed" data-id="${r.id}">
+      <div class="record-top">
+        <div class="record-who">
+          <span class="name">${r.cand_name}</span>
+          <span class="meta">${r.cand_age}歲・${r.cand_occupation}・${r.mgr_region}・${r.mgr_office}（${r.mgr_name} 主管）</span>
+        </div>
+        <div class="record-tags">
+          <span class="tag tool">${r.tool_title}</span>
+          <span class="tag ${r.cand_recommend ? 'rec-yes' : 'rec-no'}">${r.cand_recommend ? '推薦' : '未推薦'}</span>
+        </div>
+      </div>
+      <div class="record-scores">
+        <span>整體體驗 <span class="stars">${starsHtml(r.cand_overall)}</span></span>
+        <span>流程體驗 <span class="stars">${starsHtml(r.cand_process)}</span></span>
+        <span>${r.submitted_at.slice(0, 10)} 提交</span>
+      </div>
+      <p class="comment"><span class="q">留言：</span>${r.cand_comment || '（未填）'}</p>
+      <span class="toggle">查看完整問卷</span>
+      <div class="detail">
+        <div><dt>Q1 更了解工作現況</dt><dd>${r.adv_q1 || '（未填）'}</dd></div>
+        <div><dt>Q2 開始思考轉變</dt><dd>${r.adv_q2 || '（未填）'}</dd></div>
+        <div><dt>Q3 願意了解機會</dt><dd>${r.adv_q3 || '（未填）'}</dd></div>
+        <div><dt>Q4 最希望改善項目</dt><dd>${chipsHtml(r.adv_q4)}</dd></div>
+        <div><dt>Q5 希望提供資訊</dt><dd>${chipsHtml(r.adv_q5)}</dd></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderFeedbackRecords() {
+  const filtered = currentFeedbackRecords();
+  const { items, page, totalPages, totalCount } = paginate(filtered, feedbackPage, FEEDBACK_PAGE_SIZE);
+  feedbackPage = page;
+  document.getElementById('feedback-record-count').textContent = `共 ${totalCount} 筆，第 ${page}／${totalPages} 頁`;
+  document.getElementById('feedback-records').innerHTML = items.map(recordCardHtml).join('');
+  document.getElementById('feedback-download-btn').textContent = `下載 Excel（${totalCount} 筆）`;
+  document.getElementById('feedback-download-btn').disabled = totalCount === 0;
+  document.getElementById('feedback-page-prev').disabled = page <= 1;
+  document.getElementById('feedback-page-next').disabled = page >= totalPages;
+}
+
+function renderFeedback() {
+  const records = currentFeedbackRecords();
+  renderFeedbackKpis(buildFeedbackKpi(records));
+  renderAdvocacy(buildAdvocacyDistribution(records));
+  renderImprovementRanking(buildImprovementRanking(records));
+  renderFeedbackFilterOptions();
+  renderFeedbackRecords();
 }
 
 function renderUnits(units, notes) {
@@ -155,6 +280,7 @@ function renderAll(start, end) {
   renderFunnel('chart-feedback-funnel', 'feedbackFunnel', buildFeedbackFunnel(days));
   renderTools(buildTools(toolDays));
   renderDevices(buildDevices(deviceDays));
+  renderFeedback();
 
   // 顯示資料實際更新到哪一天：這是排程失敗時唯一會被使用者看見的線索
   // ——排程若壞掉，網站會繼續正常顯示「上一次成功」的資料（刻意的
@@ -209,6 +335,41 @@ function setupDateFilter() {
   document.getElementById('custom-end').addEventListener('change', applyCustom);
 }
 
+function setupFeedbackControls() {
+  ['feedback-filter-office', 'feedback-filter-tool', 'feedback-filter-recommend'].forEach((id) => {
+    document.getElementById(id).addEventListener('change', (e) => {
+      const key = { 'feedback-filter-office': 'office', 'feedback-filter-tool': 'tool',
+        'feedback-filter-recommend': 'recommend' }[id];
+      feedbackFilters[key] = e.target.value;
+      feedbackPage = 1;
+      renderFeedback();
+    });
+  });
+
+  document.getElementById('feedback-page-prev').addEventListener('click', () => {
+    feedbackPage -= 1;
+    renderFeedbackRecords();
+  });
+  document.getElementById('feedback-page-next').addEventListener('click', () => {
+    feedbackPage += 1;
+    renderFeedbackRecords();
+  });
+
+  // 事件代理：卡片會隨篩選/換頁整批重建，直接綁在容器上，
+  // 不用每次重新渲染後逐一重新掛監聽器。
+  document.getElementById('feedback-records').addEventListener('click', (e) => {
+    const card = e.target.closest('.record');
+    if (!card) return;
+    if (e.target.closest('.record-top') || e.target.closest('.toggle')) {
+      card.classList.toggle('collapsed');
+    }
+  });
+
+  document.getElementById('feedback-download-btn').addEventListener('click', () => {
+    downloadFeedbackExcel(currentFeedbackRecords(), feedbackFilters, currentRange);
+  });
+}
+
 async function unlock() {
   const password = document.getElementById('password-input').value;
   const errorEl = document.getElementById('gate-error');
@@ -247,6 +408,7 @@ async function unlock() {
     if (!listenersInitialized) {
       setupTabs();
       setupDateFilter();
+      setupFeedbackControls();
       listenersInitialized = true;
     }
     const [start, end] = presetRange('all', ALL_DATA.meta.rollout_start);
