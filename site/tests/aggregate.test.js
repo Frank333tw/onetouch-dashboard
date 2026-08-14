@@ -118,13 +118,16 @@ test('buildTrend 回傳每日序列供折線圖使用', () => {
   assert.deepEqual(trend.map((t) => t.sessions), [10, 6]);
 });
 
+// adv_q1/adv_q2/adv_q3 用真實選項文字（見 aggregate.js 裡 ADVOCACY_QUESTIONS
+// 上方的註解，來自 recruitment-web ResultActions.jsx 的 ADV_QUESTIONS，
+// 三題選項彼此不同，不是同一套同意／不同意量表）。
 const FEEDBACK_RECORDS = [
   { id: '1', submitted_at: '2026-08-01T00:00:00.000+08:00', tool_title: 'DISC',
     mgr_office: '信義通訊處', cand_overall: 5, cand_process: 4, cand_recommend: true,
-    adv_q1: '非常同意', adv_q2: '同意', adv_q3: null, adv_q4: ['介面速度'] },
+    adv_q1: '很有幫助', adv_q2: '想了解更多機會', adv_q3: null, adv_q4: ['介面速度'] },
   { id: '2', submitted_at: '2026-08-05T00:00:00.000+08:00', tool_title: '收入需求試算',
     mgr_office: '大墩通訊處', cand_overall: 3, cand_process: 3, cand_recommend: false,
-    adv_q1: '不同意', adv_q2: '同意', adv_q3: '同意', adv_q4: ['介面速度', '題目數量'] },
+    adv_q1: '幫助不大', adv_q2: '目前沒有', adv_q3: '很願意', adv_q4: ['介面速度', '題目數量'] },
 ];
 
 test('buildFeedbackKpi 計算平均星等與推薦率', () => {
@@ -160,9 +163,9 @@ test('buildAdvocacyDistribution 只計入有填答的紀錄，未填不計入分
   const q1 = dist.find((d) => d.field === 'adv_q1');
   const q3 = dist.find((d) => d.field === 'adv_q3');
   assert.equal(q1.answered_count, 2);
-  assert.equal(q1.agree_rate, 0.5, '兩筆各一同意一不同意');
+  assert.equal(q1.agree_rate, 0.5, '兩筆各一正向（很有幫助）一負向（幫助不大）');
   assert.equal(q3.answered_count, 1, '一筆是 null，不計入分母');
-  assert.equal(q3.agree_rate, 1);
+  assert.equal(q3.agree_rate, 1, '唯一一筆答「很願意」，算正向');
 });
 
 test('buildImprovementRanking 多選值攤平計數並排序', () => {

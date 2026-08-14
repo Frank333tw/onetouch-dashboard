@@ -135,21 +135,25 @@ export function buildFeedbackKpi(records) {
   };
 }
 
-// 「算作同意」的選項文字——目前是暫定假設值（尚未對照 Notion 實際 select 選項查證）。
-// 上線前必須執行 implementation plan Task 6 Step 1 查證真實選項文字，
-// 若與此處不同，須同步修正這裡與 aggregate.test.js 的 FEEDBACK_RECORDS 假資料。
-const ADVOCACY_AGREE_OPTIONS = new Set(['同意', '非常同意']);
-
+// 三題的選項文字彼此不同、不是同一套「同意／不同意」量表——來自
+// recruitment-web「Recruitment Interview Tool Design System/ui_kits/recruitment_tool/
+// ResultActions.jsx」的 ADV_QUESTIONS 常數（受測者實際看到的題目與選項），
+// 2026-08-14 已跟 Frank 核對過是正確的真實文字，不是假設值。
+// 「算正向」的判斷邏輯每題不同：
+//   Q1（這次測驗，讓你更了解自己的工作現況嗎？）：「很有幫助」「有些幫助」算正向
+//   Q2（測驗後，你開始思考工作上的轉變了嗎？）：除了「目前沒有」，其餘三個選項
+//     （想了解更多機會／想增加收入／想改善現況）都代表受測者「有在想轉變」，算正向
+//   Q3（願意花 30 分鐘，先了解看看機會嗎？）：「很願意」「可以了解看看」算正向
 const ADVOCACY_QUESTIONS = [
-  ['adv_q1', 'Q1 更了解工作現況'],
-  ['adv_q2', 'Q2 開始思考轉變'],
-  ['adv_q3', 'Q3 願意了解機會'],
+  { field: 'adv_q1', label: 'Q1 更了解工作現況', positiveOptions: new Set(['很有幫助', '有些幫助']) },
+  { field: 'adv_q2', label: 'Q2 開始思考轉變', positiveOptions: new Set(['想了解更多機會', '想增加收入', '想改善現況']) },
+  { field: 'adv_q3', label: 'Q3 願意了解機會', positiveOptions: new Set(['很願意', '可以了解看看']) },
 ];
 
 export function buildAdvocacyDistribution(records) {
-  return ADVOCACY_QUESTIONS.map(([field, label]) => {
+  return ADVOCACY_QUESTIONS.map(({ field, label, positiveOptions }) => {
     const answered = records.filter((r) => r[field] !== null && r[field] !== undefined);
-    const agreeCount = answered.filter((r) => ADVOCACY_AGREE_OPTIONS.has(r[field])).length;
+    const agreeCount = answered.filter((r) => positiveOptions.has(r[field])).length;
     return {
       field,
       label,
