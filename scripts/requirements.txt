@@ -2,3 +2,4 @@ google-analytics-data==0.23.0
 google-auth-oauthlib==1.4.0
 cryptography==49.0.0
 pytest==9.1.1
+requests==2.32.3
