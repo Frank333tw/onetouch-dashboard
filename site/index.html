@@ -12,6 +12,9 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
   integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
   crossorigin="anonymous"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"
+  integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT"
+  crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -45,6 +48,7 @@
     <button class="tab" data-tab="funnel">轉換路徑</button>
     <button class="tab" data-tab="tools">工具</button>
     <button class="tab" data-tab="devices">裝置</button>
+    <button class="tab" data-tab="feedback">問卷回饋</button>
   </div>
 
   <div class="tab-panel active" id="panel-overview">
@@ -68,6 +72,46 @@
 
   <div class="tab-panel" id="panel-devices">
     <div class="chart-wrap"><canvas id="chart-devices"></canvas></div>
+  </div>
+
+  <div class="tab-panel" id="panel-feedback">
+    <p class="section-intro">準增員填完測驗後填寫的回饋表，資料每日同步自 Notion「測驗結果回饋表紀錄」資料庫。</p>
+    <div class="kpis" id="feedback-kpi-cards"></div>
+    <div class="charts-row">
+      <div class="chart-card">
+        <h3>受測者意願度（同意比例）</h3>
+        <div id="feedback-advocacy"></div>
+      </div>
+      <div class="chart-card">
+        <h3>Q4 最希望改善項目（可複選）</h3>
+        <div id="feedback-improvement"></div>
+      </div>
+    </div>
+    <div class="section-heading">
+      <h2>逐筆紀錄</h2>
+      <span class="count" id="feedback-record-count"></span>
+    </div>
+    <div class="filters">
+      <div class="left">
+        <select id="feedback-filter-office"></select>
+        <select id="feedback-filter-tool"></select>
+        <select id="feedback-filter-recommend">
+          <option value="all">推薦：全部</option>
+          <option value="yes">僅推薦</option>
+          <option value="no">僅未推薦</option>
+        </select>
+      </div>
+      <button class="dl-btn" id="feedback-download-btn">下載 Excel</button>
+    </div>
+    <div class="records" id="feedback-records"></div>
+    <div class="pagination">
+      <button id="feedback-page-prev">‹ 上一頁</button>
+      <button id="feedback-page-next">下一頁 ›</button>
+    </div>
+    <div class="notion-cta">
+      <div class="txt">需要匯出、篩選更多欄位，或做後續追蹤管理？<b>完整資料庫在 Notion。</b></div>
+      <a href="https://app.notion.com/p/7bda2331f51344049378e9be09ad6cc9" target="_blank" rel="noopener">在 Notion 開啟原始資料庫 ↗</a>
+    </div>
   </div>
 </div>
 
