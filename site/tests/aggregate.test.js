@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   filterRange, buildKpi, buildUnits, buildTools, buildFunnel,
   buildFeedbackFunnel, buildDevices, buildTrend,
+  buildFeedbackKpi, buildAdvocacyDistribution, buildImprovementRanking,
+  filterFeedbackRecords, distinctSorted, paginate,
 } from '../aggregate.js';
 
 const DAYS = [
@@ -114,4 +116,84 @@ test('buildTrend 回傳每日序列供折線圖使用', () => {
   const trend = buildTrend(DAYS);
   assert.deepEqual(trend.map((t) => t.date), ['2026-07-01', '2026-07-02']);
   assert.deepEqual(trend.map((t) => t.sessions), [10, 6]);
+});
+
+const FEEDBACK_RECORDS = [
+  { id: '1', submitted_at: '2026-08-01T00:00:00.000+08:00', tool_title: 'DISC',
+    mgr_office: '信義通訊處', cand_overall: 5, cand_process: 4, cand_recommend: true,
+    adv_q1: '非常同意', adv_q2: '同意', adv_q3: null, adv_q4: ['介面速度'] },
+  { id: '2', submitted_at: '2026-08-05T00:00:00.000+08:00', tool_title: '收入需求試算',
+    mgr_office: '大墩通訊處', cand_overall: 3, cand_process: 3, cand_recommend: false,
+    adv_q1: '不同意', adv_q2: '同意', adv_q3: '同意', adv_q4: ['介面速度', '題目數量'] },
+];
+
+test('buildFeedbackKpi 計算平均星等與推薦率', () => {
+  const kpi = buildFeedbackKpi(FEEDBACK_RECORDS);
+  assert.equal(kpi.count, 2);
+  assert.equal(kpi.avg_overall, 4);
+  assert.equal(kpi.avg_process, 3.5);
+  assert.equal(kpi.recommend_rate, 0.5);
+});
+
+test('buildFeedbackKpi 空陣列時平均值回 null 不是 0', () => {
+  const kpi = buildFeedbackKpi([]);
+  assert.equal(kpi.count, 0);
+  assert.equal(kpi.avg_overall, null);
+  assert.equal(kpi.recommend_rate, null);
+});
+
+test('buildAdvocacyDistribution 只計入有填答的紀錄，未填不計入分母', () => {
+  const dist = buildAdvocacyDistribution(FEEDBACK_RECORDS);
+  const q1 = dist.find((d) => d.field === 'adv_q1');
+  const q3 = dist.find((d) => d.field === 'adv_q3');
+  assert.equal(q1.answered_count, 2);
+  assert.equal(q1.agree_rate, 0.5, '兩筆各一同意一不同意');
+  assert.equal(q3.answered_count, 1, '一筆是 null，不計入分母');
+  assert.equal(q3.agree_rate, 1);
+});
+
+test('buildImprovementRanking 多選值攤平計數並排序', () => {
+  const ranking = buildImprovementRanking(FEEDBACK_RECORDS);
+  assert.equal(ranking[0].label, '介面速度');
+  assert.equal(ranking[0].count, 2);
+  assert.equal(ranking[1].label, '題目數量');
+  assert.equal(ranking[1].count, 1);
+});
+
+test('filterFeedbackRecords 依日期區間與單位篩選', () => {
+  const result = filterFeedbackRecords(FEEDBACK_RECORDS, {
+    start: '2026-08-01', end: '2026-08-01', office: 'all', tool: 'all', recommend: 'all',
+  });
+  assert.equal(result.length, 1);
+  assert.equal(result[0].id, '1');
+});
+
+test('filterFeedbackRecords 依推薦與否篩選', () => {
+  const result = filterFeedbackRecords(FEEDBACK_RECORDS, {
+    start: '2026-08-01', end: '2026-08-31', office: 'all', tool: 'all', recommend: 'no',
+  });
+  assert.equal(result.length, 1);
+  assert.equal(result[0].id, '2');
+});
+
+test('distinctSorted 取不重複值並排序', () => {
+  const offices = distinctSorted(FEEDBACK_RECORDS, 'mgr_office');
+  assert.deepEqual(offices, ['信義通訊處', '大墩通訊處']);
+});
+
+test('paginate 切頁並回傳頁數資訊', () => {
+  const items = Array.from({ length: 25 }, (_, i) => i);
+  const result = paginate(items, 2, 10);
+  assert.equal(result.items.length, 10);
+  assert.equal(result.items[0], 10);
+  assert.equal(result.page, 2);
+  assert.equal(result.totalPages, 3);
+  assert.equal(result.totalCount, 25);
+});
+
+test('paginate 頁碼超出範圍時夾回最後一頁', () => {
+  const items = Array.from({ length: 5 }, (_, i) => i);
+  const result = paginate(items, 99, 10);
+  assert.equal(result.page, 1);
+  assert.equal(result.totalPages, 1);
 });

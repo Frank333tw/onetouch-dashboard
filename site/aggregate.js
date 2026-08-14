@@ -119,3 +119,79 @@ export function buildDevices(deviceDays) {
 export function buildTrend(days) {
   return days.map((d) => ({ date: d.date, sessions: d.sessions }));
 }
+
+export function buildFeedbackKpi(records) {
+  const count = records.length;
+  const avg = (field) => (count ? records.reduce((acc, r) => acc + r[field], 0) / count : null);
+  const recommendCount = records.filter((r) => r.cand_recommend).length;
+  return {
+    count,
+    avg_overall: avg('cand_overall'),
+    avg_process: avg('cand_process'),
+    recommend_rate: count ? recommendCount / count : null,
+  };
+}
+
+// 「算作同意」的選項文字——來自 Notion「測驗結果回饋表紀錄」資料庫
+// adv_q1/adv_q2/adv_q3 三個 select 欄位的實際選項，查證方式見本檔案
+// 對應的 implementation plan Task 6 Step 1。
+const ADVOCACY_AGREE_OPTIONS = new Set(['同意', '非常同意']);
+
+const ADVOCACY_QUESTIONS = [
+  ['adv_q1', 'Q1 更了解工作現況'],
+  ['adv_q2', 'Q2 開始思考轉變'],
+  ['adv_q3', 'Q3 願意了解機會'],
+];
+
+export function buildAdvocacyDistribution(records) {
+  return ADVOCACY_QUESTIONS.map(([field, label]) => {
+    const answered = records.filter((r) => r[field] !== null && r[field] !== undefined);
+    const agreeCount = answered.filter((r) => ADVOCACY_AGREE_OPTIONS.has(r[field])).length;
+    return {
+      field,
+      label,
+      answered_count: answered.length,
+      agree_rate: answered.length ? agreeCount / answered.length : null,
+    };
+  });
+}
+
+export function buildImprovementRanking(records) {
+  const acc = {};
+  for (const r of records) {
+    for (const item of r.adv_q4 || []) {
+      acc[item] = (acc[item] || 0) + 1;
+    }
+  }
+  return Object.entries(acc)
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+export function filterFeedbackRecords(records, { start, end, office = 'all', tool = 'all', recommend = 'all' }) {
+  return records.filter((r) => {
+    const date = r.submitted_at.slice(0, 10);
+    if (date < start || date > end) return false;
+    if (office !== 'all' && r.mgr_office !== office) return false;
+    if (tool !== 'all' && r.tool_title !== tool) return false;
+    if (recommend === 'yes' && !r.cand_recommend) return false;
+    if (recommend === 'no' && r.cand_recommend) return false;
+    return true;
+  });
+}
+
+export function distinctSorted(records, field) {
+  return [...new Set(records.map((r) => r[field]))].filter(Boolean).sort();
+}
+
+export function paginate(items, page, pageSize) {
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const clampedPage = Math.min(Math.max(1, page), totalPages);
+  const start = (clampedPage - 1) * pageSize;
+  return {
+    items: items.slice(start, start + pageSize),
+    page: clampedPage,
+    totalPages,
+    totalCount: items.length,
+  };
+}
