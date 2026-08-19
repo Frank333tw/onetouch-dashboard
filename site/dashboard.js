@@ -221,7 +221,7 @@ function renderUnits(units, notes) {
       labels: units.map((u) => u.label),
       datasets: [
         { label: '開啟工具', data: units.map((u) => u.tool_open), backgroundColor: NAVY_SOFT },
-        { label: '看到結果', data: units.map((u) => u.result_view), backgroundColor: GOLD },
+        { label: '完成測驗', data: units.map((u) => u.result_view), backgroundColor: GOLD },
       ],
     },
     options: {
