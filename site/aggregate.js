@@ -1,8 +1,8 @@
 // 純函式：每日粒度陣列 + 日期區間 → 六區塊需要的彙總資料。無 DOM、無網路。
 
 const UNIT_LABELS = {
-  taian: '台安', yisheng: '益盛', changqing: '長青', feiang: '飛昂',
-  '(direct)': '直接進入／未帶追蹤連結', '(not set)': '來源未知',
+  taian: '台安', feiang: '飛昂',
+  '(direct)': '直接進入／未帶追蹤連結',
 };
 
 const TOOL_LABELS = {
@@ -11,11 +11,16 @@ const TOOL_LABELS = {
   '/tool/career-motivation': '動力分析',
   '/tool/work-satisfaction': '工作滿意度',
   '/tool/career-placement': '職業落點',
-  '/tool/career-unlock': '圓夢起點（已下架）',
 };
 
 const DEVICE_LABELS = { desktop: '桌機', mobile: '手機', tablet: '平板' };
-const TRACKED_UNITS = ['taian', 'yisheng', 'changqing', 'feiang'];
+// 長青、益盛討論後最終沒有參與測試，不再追蹤；圓夢起點已下架。
+const TRACKED_UNITS = ['taian', 'feiang'];
+// GA4 無法歸因來源時歸到這裡，可能是跨網域/App 內建瀏覽器丟失 referrer、
+// 隱私設定阻擋，或處理延遲等原因——來源不明確、量也小，不追蹤顯示。
+const EXCLUDED_UNIT_SOURCES = ['(not set)'];
+// 已下架的工具，歷史資料仍在 GA 但不再顯示於比較圖。
+const EXCLUDED_TOOL_PATHS = ['/tool/career-unlock'];
 
 export function filterRange(days, start, end) {
   return days.filter((d) => d.date >= start && d.date <= end);
@@ -41,6 +46,7 @@ export function buildKpi(days) {
 export function buildUnits(unitDays) {
   const acc = {};
   for (const r of unitDays) {
+    if (EXCLUDED_UNIT_SOURCES.includes(r.source)) continue;
     const entry = acc[r.source] || { source: r.source, tool_open: 0, result_view: 0 };
     entry.tool_open += r.tool_open || 0;
     entry.result_view += r.result_view || 0;
@@ -61,6 +67,7 @@ export function buildUnits(unitDays) {
 export function buildTools(toolDays) {
   const acc = {};
   for (const r of toolDays) {
+    if (EXCLUDED_TOOL_PATHS.includes(r.path)) continue;
     acc[r.path] = (acc[r.path] || 0) + r.views;
   }
   const tools = Object.entries(acc).map(([path, views]) => ({

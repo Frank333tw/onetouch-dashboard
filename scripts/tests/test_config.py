@@ -15,8 +15,6 @@ def test_rollout_start():
 def test_unit_label_maps_known_units():
     assert unit_label("taian") == "台安"
     assert unit_label("feiang") == "飛昂"
-    assert unit_label("changqing") == "長青"
-    assert unit_label("yisheng") == "益盛"
 
 
 def test_unit_label_direct_traffic():
@@ -25,6 +23,9 @@ def test_unit_label_direct_traffic():
 
 def test_unit_label_passes_through_unknown():
     assert unit_label("m.facebook.com") == "m.facebook.com"
+    # 長青、益盛最終沒有參與測試，已從對照表移除，走原樣傳回
+    assert unit_label("changqing") == "changqing"
+    assert unit_label("yisheng") == "yisheng"
 
 
 def test_tool_label_maps_paths():
@@ -35,8 +36,9 @@ def test_tool_label_maps_paths():
     assert tool_label("/tool/career-placement") == "職業落點"
 
 
-def test_tool_label_marks_retired_tool():
-    assert tool_label("/tool/career-unlock") == "圓夢起點（已下架）"
+def test_tool_label_passes_through_retired_tool():
+    # 圓夢起點已下架、不再追蹤，已從對照表移除，走原樣傳回
+    assert tool_label("/tool/career-unlock") == "/tool/career-unlock"
 
 
 def test_device_label_translates():

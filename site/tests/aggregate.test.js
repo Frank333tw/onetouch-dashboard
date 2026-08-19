@@ -37,16 +37,32 @@ test('buildKpi 完成率無分母時回 null，不是 0', () => {
   assert.equal(kpi.completion_rate, null);
 });
 
-test('buildUnits 四單位掛零仍列出', () => {
+test('buildUnits 追蹤單位掛零仍列出', () => {
   const unitDays = [
     { date: '2026-07-01', source: 'feiang', tool_open: 5, result_view: 2 },
   ];
   const units = buildUnits(unitDays);
   const sources = units.map((u) => u.source);
-  assert.ok(['taian', 'yisheng', 'changqing', 'feiang'].every((s) => sources.includes(s)));
-  const changqing = units.find((u) => u.source === 'changqing');
-  assert.equal(changqing.tool_open, 0);
-  assert.equal(changqing.completion_rate, null);
+  assert.ok(['taian', 'feiang'].every((s) => sources.includes(s)));
+  const taian = units.find((u) => u.source === 'taian');
+  assert.equal(taian.tool_open, 0);
+  assert.equal(taian.completion_rate, null);
+});
+
+test('buildUnits 長青、益盛最終沒有參與測試，不再列出', () => {
+  const units = buildUnits([]);
+  const sources = units.map((u) => u.source);
+  assert.ok(!sources.includes('changqing'));
+  assert.ok(!sources.includes('yisheng'));
+});
+
+test('buildUnits 排除來源未知（(not set)），來源不明確不追蹤顯示', () => {
+  const unitDays = [
+    { date: '2026-07-01', source: 'taian', tool_open: 5, result_view: 2 },
+    { date: '2026-07-01', source: '(not set)', tool_open: 1, result_view: 0 },
+  ];
+  const units = buildUnits(unitDays);
+  assert.ok(!units.some((u) => u.source === '(not set)'));
 });
 
 test('buildUnits 依 tool_open 由高到低排序', () => {
@@ -68,6 +84,15 @@ test('buildTools 加總每日工具瀏覽數並排序', () => {
   assert.equal(tools[0].path, '/tool/behavior-disc');
   assert.equal(tools[0].views, 8);
   assert.equal(tools[0].label, '行為模式 DISC');
+});
+
+test('buildTools 排除已下架的圓夢起點，不再追蹤顯示', () => {
+  const toolDays = [
+    { date: '2026-07-01', path: '/tool/behavior-disc', views: 5 },
+    { date: '2026-07-01', path: '/tool/career-unlock', views: 19 },
+  ];
+  const tools = buildTools(toolDays);
+  assert.ok(!tools.some((t) => t.path === '/tool/career-unlock'));
 });
 
 test('buildFunnel 五階段含產生結果圖', () => {

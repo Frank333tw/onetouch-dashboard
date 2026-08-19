@@ -37,11 +37,8 @@ ROLLOUT_START = "2026-07-01"
 # meta 欄位傳到前端。
 UNIT_LABELS = {
     "taian": "台安",
-    "yisheng": "益盛",
-    "changqing": "長青",
     "feiang": "飛昂",
     "(direct)": "直接進入／未帶追蹤連結",
-    "(not set)": "來源未知",
 }
 
 TOOL_LABELS = {
@@ -50,7 +47,6 @@ TOOL_LABELS = {
     "/tool/career-motivation": "動力分析",
     "/tool/work-satisfaction": "工作滿意度",
     "/tool/career-placement": "職業落點",
-    "/tool/career-unlock": "圓夢起點（已下架）",
 }
 
 DEVICE_LABELS = {
@@ -59,8 +55,9 @@ DEVICE_LABELS = {
     "tablet": "平板",
 }
 
-# 四個推廣單位固定出現在單位比較區塊，即使數字為零
-TRACKED_UNITS = ["taian", "yisheng", "changqing", "feiang"]
+# 固定出現在單位比較區塊的推廣單位，即使數字為零
+# 長青、益盛討論後最終沒有參與測試，不再追蹤
+TRACKED_UNITS = ["taian", "feiang"]
 
 # transform_daily.py 實際會處理的事件名稱——查詢 GA4 時用來篩選 eventName，
 # 避免把 page_view／scroll／session_start 這類 GA4 自動收集、我們沒在用的
@@ -86,8 +83,6 @@ REPORT_NOTES = [
     "單位比較會低估回訪使用量：GA4 於 session 開始時歸因來源，"
     "主管第一次用單位短網址進入會正確歸戶，之後直接開網址或從書籤進入的"
     "session 會歸到「直接進入」。因此各單位數字偏低、「直接進入」會隨推廣時間膨脹。",
-    "長青、益盛自 2026-07-23 起推廣進度 pending、暫緩，"
-    "兩單位數字偏低或為零是「尚未開始」，不代表工具或推廣效果不佳。",
 ]
 
 
