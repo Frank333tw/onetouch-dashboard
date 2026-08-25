@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   filterRange, buildKpi, buildUnits, buildTools, buildFunnel,
-  buildFeedbackFunnel, buildDevices, buildTrend,
+  buildFeedbackFunnel, buildDevices, buildBrowsers, buildTrend,
   buildFeedbackKpi, buildAdvocacyDistribution, buildImprovementRanking,
   filterFeedbackRecords, distinctSorted, paginate,
 } from '../aggregate.js';
@@ -135,6 +135,25 @@ test('buildDevices 計算佔比', () => {
 test('buildDevices 總數為 0 時，佔比回 null 不是 0 或 NaN', () => {
   const devices = buildDevices([{ date: '2026-07-01', category: 'desktop', sessions: 0 }]);
   assert.equal(devices[0].share, null);
+});
+
+test('buildBrowsers 依 in-app／webview 關鍵字歸類成兩桶並計算佔比', () => {
+  const browserDays = [
+    { date: '2026-07-01', browser: 'Safari', sessions: 6 },
+    { date: '2026-07-01', browser: 'Safari (in-app)', sessions: 3 },
+    { date: '2026-07-02', browser: 'Android Webview', sessions: 1 },
+  ];
+  const browsers = buildBrowsers(browserDays);
+  const inApp = browsers.find((b) => b.key === 'in_app');
+  const general = browsers.find((b) => b.key === 'general');
+  assert.equal(inApp.sessions, 4);
+  assert.equal(general.sessions, 6);
+  assert.equal(inApp.share, 0.4);
+});
+
+test('buildBrowsers 總數為 0 時，佔比回 null 不是 0 或 NaN', () => {
+  const browsers = buildBrowsers([{ date: '2026-07-01', browser: 'Safari', sessions: 0 }]);
+  assert.equal(browsers[0].share, null);
 });
 
 test('buildTrend 回傳每日序列供折線圖使用', () => {

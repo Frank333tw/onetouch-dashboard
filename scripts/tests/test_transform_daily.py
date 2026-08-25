@@ -1,5 +1,6 @@
 from transform_daily import (
     format_date, build_days, build_days_by_unit, build_days_by_tool, build_days_by_device,
+    build_days_by_browser,
 )
 
 
@@ -112,6 +113,18 @@ def test_build_days_by_device():
     assert len(result) == 3
     d1 = next(r for r in result if r["date"] == "2026-07-01" and r["category"] == "desktop")
     assert d1["sessions"] == 10
+
+
+def test_build_days_by_browser():
+    rows = [
+        {"dims": ["20260701", "Safari"], "metrics": ["10"]},
+        {"dims": ["20260701", "Safari (in-app)"], "metrics": ["5"]},
+        {"dims": ["20260702", "Android Webview"], "metrics": ["3"]},
+    ]
+    result = build_days_by_browser(rows)
+    assert len(result) == 3
+    d1 = next(r for r in result if r["date"] == "2026-07-01" and r["browser"] == "Safari (in-app)")
+    assert d1["sessions"] == 5
 
 
 def test_build_days_fills_gaps_for_dates_ga4_omits_as_zero_activity():

@@ -111,3 +111,18 @@ def build_days_by_device(rows):
         for r in rows
     ]
     return sorted(result, key=lambda d: (d["date"], d["category"]))
+
+
+def build_days_by_browser(rows):
+    """[{dims:[date, browser], metrics:[sessions]}] → 每日每瀏覽器紀錄。
+
+    browser 原始值只留給前端分類成「App 內建瀏覽器 / 一般瀏覽器」用，
+    不在這裡分類——GA4 對 in-app browser 的標籤本身會隨時間演變
+    （目前實測看到 "Safari (in-app)"、"Android Webview"），分類規則
+    寫在前端才能不改這支程式就跟著調整關鍵字。
+    """
+    result = [
+        {"date": format_date(r["dims"][0]), "browser": r["dims"][1], "sessions": int(r["metrics"][0])}
+        for r in rows
+    ]
+    return sorted(result, key=lambda d: (d["date"], d["browser"]))

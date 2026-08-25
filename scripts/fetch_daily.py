@@ -32,12 +32,14 @@ def collect(client: GAClient, start: str, end: str) -> dict:
         event_names=UNIT_TRACKED_EVENTS,
     )
     devices = client.run(["date", "deviceCategory"], ["sessions"], start, end)
+    browsers = client.run(["date", "browser"], ["sessions"], start, end)
 
     return {
         "days": td.build_days(totals, events, pages, start, end),
         "days_by_unit": td.build_days_by_unit(units),
         "days_by_tool": td.build_days_by_tool(pages),
         "days_by_device": td.build_days_by_device(devices),
+        "days_by_browser": td.build_days_by_browser(browsers),
     }
 
 

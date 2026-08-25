@@ -14,6 +14,12 @@ const TOOL_LABELS = {
 };
 
 const DEVICE_LABELS = { desktop: '桌機', mobile: '手機', tablet: '平板' };
+// GA4 對 App 內建瀏覽器（LINE、FB、IG 等都用系統 WebView 開啟）目前實測
+// 只會標成「Safari (in-app)」「Android Webview」這類統稱，無法區分是哪個
+// App——所以這裡只能分「App 內建瀏覽器」vs「一般瀏覽器」兩類，不能直接
+// 當成「LINE 使用者數」。用關鍵字比對而非白名單，是因為 GA4 這個標籤
+// 本身沒有公開文件保證值域，之後可能出現目前沒看過的其他 in-app 字串。
+const IN_APP_BROWSER_PATTERN = /in-app|webview/i;
 // 長青、益盛討論後最終沒有參與測試，不再追蹤；圓夢起點已下架。
 const TRACKED_UNITS = ['taian', 'feiang'];
 // GA4 無法歸因來源時歸到這裡，可能是跨網域/App 內建瀏覽器丟失 referrer、
@@ -121,6 +127,20 @@ export function buildDevices(deviceDays) {
   }));
   devices.sort((a, b) => b.sessions - a.sessions);
   return devices;
+}
+
+export function buildBrowsers(browserDays) {
+  let inApp = 0;
+  let general = 0;
+  for (const r of browserDays) {
+    if (IN_APP_BROWSER_PATTERN.test(r.browser)) inApp += r.sessions;
+    else general += r.sessions;
+  }
+  const total = inApp + general;
+  return [
+    { key: 'in_app', label: 'App 內建瀏覽器', sessions: inApp, share: total ? inApp / total : null },
+    { key: 'general', label: '一般瀏覽器', sessions: general, share: total ? general / total : null },
+  ];
 }
 
 export function buildTrend(days) {

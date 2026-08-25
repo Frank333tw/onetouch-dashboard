@@ -1,7 +1,7 @@
 import { decryptData } from './decrypt.js';
 import {
   filterRange, buildKpi, buildUnits, buildTools, buildFunnel,
-  buildFeedbackFunnel, buildDevices, buildTrend,
+  buildFeedbackFunnel, buildDevices, buildBrowsers, buildTrend,
   buildFeedbackKpi, buildAdvocacyDistribution, buildImprovementRanking,
   filterFeedbackRecords, distinctSorted, paginate,
 } from './aggregate.js';
@@ -11,7 +11,7 @@ const NAVY = '#0F2545';
 const NAVY_SOFT = '#1E3A6B';
 const GOLD = '#C8973A';
 
-let ALL_DATA = null; // { days, days_by_unit, days_by_tool, days_by_device, feedback_records, meta }
+let ALL_DATA = null; // { days, days_by_unit, days_by_tool, days_by_device, days_by_browser, feedback_records, meta }
 let charts = {};
 let currentRange = null; // [start, end]，供切換頁籤時重繪目前圖表用
 let listenersInitialized = false; // 見 unlock() 內說明
@@ -283,12 +283,34 @@ function renderDevices(devices) {
   });
 }
 
+function renderBrowsers(browsers) {
+  destroyChart('browsers');
+  charts.browsers = new Chart(document.getElementById('chart-browsers'), {
+    type: 'doughnut',
+    data: {
+      labels: browsers.map((b) => b.label),
+      datasets: [{ data: browsers.map((b) => b.sessions), backgroundColor: [GOLD, NAVY_SOFT] }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { tooltip: { callbacks: {
+        label: (item) => {
+          const b = browsers[item.dataIndex];
+          const pct = b.share === null ? '—' : `${(b.share * 100).toFixed(1)}%`;
+          return `${b.label}：${b.sessions}（${pct}）`;
+        },
+      } } },
+    },
+  });
+}
+
 function renderAll(start, end) {
   currentRange = [start, end];
   const days = filterRange(ALL_DATA.days, start, end);
   const unitDays = ALL_DATA.days_by_unit.filter((d) => d.date >= start && d.date <= end);
   const toolDays = ALL_DATA.days_by_tool.filter((d) => d.date >= start && d.date <= end);
   const deviceDays = ALL_DATA.days_by_device.filter((d) => d.date >= start && d.date <= end);
+  const browserDays = ALL_DATA.days_by_browser.filter((d) => d.date >= start && d.date <= end);
 
   renderKpis(buildKpi(days));
   renderTrend(buildTrend(days));
@@ -297,6 +319,7 @@ function renderAll(start, end) {
   renderFunnel('chart-feedback-funnel', 'feedbackFunnel', buildFeedbackFunnel(days));
   renderTools(buildTools(toolDays));
   renderDevices(buildDevices(deviceDays));
+  renderBrowsers(buildBrowsers(browserDays));
   renderFeedback();
 
   // 顯示資料實際更新到哪一天：這是排程失敗時唯一會被使用者看見的線索

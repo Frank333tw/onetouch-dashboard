@@ -72,7 +72,21 @@
   </div>
 
   <div class="tab-panel" id="panel-devices">
-    <div class="chart-wrap"><canvas id="chart-devices"></canvas></div>
+    <div class="charts-row">
+      <div class="chart-card">
+        <h3>裝置類型</h3>
+        <div class="chart-wrap"><canvas id="chart-devices"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>瀏覽器類型</h3>
+        <div class="chart-wrap"><canvas id="chart-browsers"></canvas></div>
+      </div>
+    </div>
+    <div class="note-box">
+      <ul>
+        <li>「App 內建瀏覽器」指透過 LINE、Facebook、Instagram 等 App 內建的瀏覽器開啟（而非獨立開啟 Safari／Chrome）。GA4 只能辨識「是不是透過某個 App 開啟」，無法辨識是哪一個 App，因此這個數字<strong>不等於 LINE 使用者數</strong>，只能作為概估參考。</li>
+      </ul>
+    </div>
   </div>
 
   <div class="tab-panel" id="panel-feedback">
